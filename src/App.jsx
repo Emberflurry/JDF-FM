@@ -240,7 +240,7 @@ function FeedPage() {
         <div>
           <p className="eyebrow">JDF-FM</p>
           <h1>Ze Daily-ish DelBosQueue Bops</h1>
-          <p className="muted">~a.k.a. whatever floats across le feed~</p>
+          <p className="muted">whatever floats across LeFeed -- Brought to you by the Glice-o-line Corporation, a.r.r.</p>
         </div>
 
         <a className="adminButton" href="/admin">
