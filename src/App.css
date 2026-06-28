@@ -349,8 +349,8 @@ select:focus {
 
 @media (max-width: 620px) {
   .page {
-    width: min(100% - 22px, 1120px);
-    padding-top: 18px;
+    width: min(100% - 18px, 1120px);
+    padding-top: 16px;
   }
 
   .hero {
@@ -363,7 +363,56 @@ select:focus {
   }
 
   .grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .songCard {
+    border-radius: 18px;
+  }
+
+  .songBody {
+    padding: 10px;
+  }
+
+  .songTop {
+    gap: 8px;
+  }
+
+  h2 {
+    font-size: 0.92rem;
+    line-height: 1.12;
+  }
+
+  .artist {
+    font-size: 0.82rem;
+  }
+
+  .album,
+  .dateLine,
+  .platform {
+    font-size: 0.74rem;
+  }
+
+  .notes {
+    font-size: 0.78rem;
+    line-height: 1.35;
+    margin-top: 8px;
+  }
+
+  .chip {
+    font-size: 0.72rem;
+    padding: 5px 8px;
+  }
+
+  .tagRow.small {
+    margin-top: 8px;
+    gap: 5px;
+  }
+
+  .linkIcon {
+    width: 30px;
+    height: 30px;
   }
 
   .twoCol {
