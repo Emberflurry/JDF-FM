@@ -194,9 +194,9 @@ function FeedPage() {
     <main className="page">
       <header className="hero">
         <div>
-          <p className="eyebrow">song diary</p>
-          <h1>Stuff I’ve been finding</h1>
-          <p className="muted">A running feed of songs, artists, moods, links, and loose notes.</p>
+          <p className="eyebrow">JDF-FM</p>
+          <h1>Ze Daily-ish DelBosQueue Bops</h1>
+          <p className="muted">~a.k.a. whatever floats across le feed~</p>
         </div>
 
         <a className="adminButton" href="/admin">
