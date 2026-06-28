@@ -319,11 +319,46 @@ function AdminPage({ session }) {
   })
 
   const [saving, setSaving] = useState(false)
+  const [fetchingMeta, setFetchingMeta] = useState(false)
   const [status, setStatus] = useState('')
 
   function updateField(field, value) {
     setForm((prev) => ({ ...prev, [field]: value }))
   }
+
+  async function fetchMetadata() {
+  if (!form.link_url.trim()) {
+    setStatus('Paste a song link first.')
+    return
+  }
+
+  setFetchingMeta(true)
+  setStatus('Fetching metadata...')
+
+  try {
+    const res = await fetch(`/api/fetch-metadata?url=${encodeURIComponent(form.link_url.trim())}`)
+    const data = await res.json()
+
+    if (!res.ok) {
+      throw new Error(data.error || 'Could not fetch metadata')
+    }
+
+    setForm((prev) => ({
+      ...prev,
+      title: data.title || prev.title,
+      artist: data.artist || prev.artist,
+      album: data.album || prev.album,
+      cover_url: data.cover_url || prev.cover_url,
+    }))
+
+    setStatus('Metadata fetched. Check title/artist before saving.')
+  } catch (err) {
+    console.error(err)
+    setStatus(`Metadata fetch failed: ${err.message}`)
+  }
+
+  setFetchingMeta(false)
+}
 
   function resetForm() {
     const t = todayParts()
@@ -494,7 +529,14 @@ function AdminPage({ session }) {
             placeholder="Spotify / Apple / YouTube / SoundCloud link"
           />
         </label>
-
+<button
+  type="button"
+  className="secondaryButton"
+  onClick={fetchMetadata}
+  disabled={fetchingMeta || !form.link_url.trim()}
+>
+  {fetchingMeta ? 'Fetching info...' : 'Fetch info from link'}
+</button>
         <label>
           Cover image URL
           <input
