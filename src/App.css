@@ -378,3 +378,7 @@ select:focus {
     width: 100%;
   }
 }
+
+.passwordPanel {
+  margin-bottom: 16px;
+}

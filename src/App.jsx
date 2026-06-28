@@ -61,12 +61,37 @@ function normalizeSong(row) {
 
 function LoginPage() {
   const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [status, setStatus] = useState('')
   const [loading, setLoading] = useState(false)
+  const [sendingMagic, setSendingMagic] = useState(false)
 
-  async function sendMagicLink(e) {
+  async function signInWithPassword(e) {
     e.preventDefault()
     setLoading(true)
+    setStatus('')
+
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    })
+
+    setLoading(false)
+
+    if (error) {
+      setStatus(`Login error: ${error.message}`)
+    } else {
+      window.location.href = '/admin'
+    }
+  }
+
+  async function sendMagicLink() {
+    if (!email.trim()) {
+      setStatus('Enter your email first.')
+      return
+    }
+
+    setSendingMagic(true)
     setStatus('')
 
     const redirectTo = `${window.location.origin}/admin`
@@ -76,34 +101,53 @@ function LoginPage() {
       options: { emailRedirectTo: redirectTo },
     })
 
-    setLoading(false)
+    setSendingMagic(false)
 
     if (error) {
-      setStatus(`Error: ${error.message}`)
+      setStatus(`Magic link error: ${error.message}`)
     } else {
-      setStatus('Magic link sent. Open it on this device/browser.')
+      setStatus('Magic link sent. Use this once, then set a password in /admin.')
     }
   }
 
   return (
     <main className="page narrow">
-      <a className="backLink" href="/">← Back to songs</a>
+      <a className="backLink" href="/">← Back to JDF-FM</a>
 
       <section className="panel">
         <h1>Admin login</h1>
-        <p className="muted">Enter your email and Supabase will send a magic link.</p>
+        <p className="muted">Use your email and password. Magic link is still here as backup.</p>
 
-        <form onSubmit={sendMagicLink} className="stack">
+        <form onSubmit={signInWithPassword} className="stack">
           <input
             type="email"
             placeholder="you@email.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            autoComplete="email"
+            required
+          />
+
+          <input
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            autoComplete="current-password"
             required
           />
 
           <button className="primaryButton" disabled={loading}>
-            {loading ? 'Sending...' : 'Send magic link'}
+            {loading ? 'Logging in...' : 'Log in'}
+          </button>
+
+          <button
+            type="button"
+            className="secondaryButton"
+            onClick={sendMagicLink}
+            disabled={sendingMagic}
+          >
+            {sendingMagic ? 'Sending magic link...' : 'Send magic link instead'}
           </button>
         </form>
 
@@ -321,6 +365,33 @@ function AdminPage({ session }) {
   const [saving, setSaving] = useState(false)
   const [fetchingMeta, setFetchingMeta] = useState(false)
   const [status, setStatus] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [settingPassword, setSettingPassword] = useState(false)
+
+async function setAccountPassword(e) {
+  e.preventDefault()
+
+  if (newPassword.length < 8) {
+    setStatus('Use at least 8 characters for the password.')
+    return
+  }
+
+  setSettingPassword(true)
+  setStatus('Setting password...')
+
+  const { error } = await supabase.auth.updateUser({
+    password: newPassword,
+  })
+
+  setSettingPassword(false)
+
+  if (error) {
+    setStatus(`Password error: ${error.message}`)
+  } else {
+    setNewPassword('')
+    setStatus('Password set. Future logins can use email + password.')
+  }
+}
 
   function updateField(field, value) {
     setForm((prev) => ({ ...prev, [field]: value }))
@@ -479,6 +550,30 @@ function AdminPage({ session }) {
   return (
     <main className="page narrow">
       <header className="adminHeader">
+
+<section className="panel passwordPanel">
+  <form onSubmit={setAccountPassword} className="stack">
+    <label>
+      Set/update admin password
+      <input
+        type="password"
+        value={newPassword}
+        onChange={(e) => setNewPassword(e.target.value)}
+        placeholder="New password, 8+ chars"
+        autoComplete="new-password"
+      />
+    </label>
+
+    <button
+      type="submit"
+      className="secondaryButton"
+      disabled={settingPassword || !newPassword}
+    >
+      {settingPassword ? 'Setting password...' : 'Set password'}
+    </button>
+  </form>
+</section>
+
         <div>
           <a className="backLink" href="/">← Back to feed</a>
           <h1>Add song</h1>
