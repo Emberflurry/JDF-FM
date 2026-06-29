@@ -197,7 +197,13 @@ function LoginPage() {
     </main>
   )
 }
-
+function FooterBar() {
+  return (
+    <footer className="footerBar">
+      <p>JDF-FM · Daily-ish finds from the DelBosQueue</p>
+    </footer>
+  )
+}
 function FeedPage({ session }) {
  const [songs, setSongs] = useState([])
 const [loading, setLoading] = useState(true)
@@ -744,6 +750,7 @@ useEffect(() => {
           ))}
         </section>
       )}
+      <FooterBar />
     </main>
   )
 }
