@@ -498,9 +498,9 @@ useEffect(() => {
     <main className="page">
       <header className="hero">
         <div>
-          <p className="eyebrow">JDF-FM</p>
-          <h1>Ze Daily-ish DelBosQueue Bops</h1>
-          <p className="muted">whatever floats across LeFeed </p>
+          <p className="eyebrow">ur listening to:</p>  
+          <h1>JDF-FM</h1>
+          <p className="muted">Ze Daily-ish DelBosQueue Bops: whatever floats across LeFeed </p>
           <p className="muted">-- Brought to you by the Gliceoline Corporation, GMbH, a.r.r. -- </p>
         </div>
 
