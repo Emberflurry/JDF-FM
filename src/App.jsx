@@ -201,6 +201,7 @@ function FooterBar() {
   return (
     <footer className="footerBar">
       <p>JDF-FM · Daily-ish finds from the DelBosQueue</p>
+      <p>Inspired by Jezzahs unparalleled passion for the tunes</p>
     </footer>
   )
 }
