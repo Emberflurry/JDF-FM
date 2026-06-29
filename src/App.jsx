@@ -206,6 +206,13 @@ const [selectedTag, setSelectedTag] = useState('')
 const [viewMode, setViewMode] = useState(
   localStorage.getItem('jdf_fm_view_mode') || 'cards'
 )
+const [sortBy, setSortBy] = useState(
+  localStorage.getItem('jdf_fm_sort_by') || 'post_date'
+)
+
+const [sortDir, setSortDir] = useState(
+  localStorage.getItem('jdf_fm_sort_dir') || 'desc'
+)
 const [expandedSongId, setExpandedSongId] = useState(null)
 const [commentDrafts, setCommentDrafts] = useState({})
 const [authorName, setAuthorName] = useState(
@@ -335,6 +342,32 @@ function changeViewMode(nextMode) {
   setViewMode(nextMode)
   localStorage.setItem('jdf_fm_view_mode', nextMode)
 }
+function changeSortBy(nextSortBy) {
+  setSortBy(nextSortBy)
+  localStorage.setItem('jdf_fm_sort_by', nextSortBy)
+}
+
+function changeSortDir(nextSortDir) {
+  setSortDir(nextSortDir)
+  localStorage.setItem('jdf_fm_sort_dir', nextSortDir)
+}
+
+function findDateSortValue(song) {
+  const year = song.find_year || 0
+  const month = song.find_month || 1
+  const day = song.find_day || 1
+
+  return year * 10000 + month * 100 + day
+}
+
+function songSortValue(song, key) {
+  if (key === 'likes') return song.upvotes || 0
+  if (key === 'comments') return song.comment_count || 0
+  if (key === 'find_date') return findDateSortValue(song)
+
+  // default: post_date
+  return song.post_date ? new Date(`${song.post_date}T12:00:00`).getTime() : 0
+}
 async function handleVote(song, value) {
   if (!session) {
     requireLogin()
@@ -430,22 +463,36 @@ useEffect(() => {
   }, [songs])
 
   const filteredSongs = useMemo(() => {
-    const q = search.toLowerCase().trim()
+  const q = search.toLowerCase().trim()
 
-    return songs.filter((song) => {
-      const matchesSearch =
-        !q ||
-        song.title?.toLowerCase().includes(q) ||
-        song.artist?.toLowerCase().includes(q) ||
-        song.album?.toLowerCase().includes(q) ||
-        song.notes?.toLowerCase().includes(q)
+  const filtered = songs.filter((song) => {
+    const matchesSearch =
+      !q ||
+      song.title?.toLowerCase().includes(q) ||
+      song.artist?.toLowerCase().includes(q) ||
+      song.album?.toLowerCase().includes(q) ||
+      song.notes?.toLowerCase().includes(q)
 
-      const matchesTag =
-        !selectedTag || song.tags.some((tag) => tag.slug === selectedTag)
+    const matchesTag =
+      !selectedTag || song.tags.some((tag) => tag.slug === selectedTag)
 
-      return matchesSearch && matchesTag
-    })
-  }, [songs, search, selectedTag])
+    return matchesSearch && matchesTag
+  })
+
+  return [...filtered].sort((a, b) => {
+    const av = songSortValue(a, sortBy)
+    const bv = songSortValue(b, sortBy)
+
+    if (av !== bv) {
+      return sortDir === 'asc' ? av - bv : bv - av
+    }
+
+    // Tie-breaker: newest created first.
+    const ac = new Date(a.created_at || 0).getTime()
+    const bc = new Date(b.created_at || 0).getTime()
+    return bc - ac
+  })
+}, [songs, search, selectedTag, sortBy, sortDir])
 
   return (
     <main className="page">
@@ -502,6 +549,34 @@ useEffect(() => {
     List
   </button>
 </div>
+
+<div className="sortControls">
+  <label>
+    Sort by
+    <select
+      value={sortBy}
+      onChange={(e) => changeSortBy(e.target.value)}
+    >
+      <option value="post_date">Post date</option>
+      <option value="find_date">Find date</option>
+      <option value="likes">Likes</option>
+      <option value="comments">Comments</option>
+    </select>
+  </label>
+
+  <label>
+    Order
+    <select
+      value={sortDir}
+      onChange={(e) => changeSortDir(e.target.value)}
+    >
+      <option value="desc">High/new → low/old</option>
+      <option value="asc">Low/old → high/new</option>
+    </select>
+  </label>
+</div>
+
+
         <div className="tagRow">
           <button
             className={!selectedTag ? 'chip active' : 'chip'}
