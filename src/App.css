@@ -540,7 +540,9 @@ select:focus {
 .listView .platform {
   text-align: right;
 }
-
+.listView .songBody {
+  padding-left: 16px;
+}
 .listView .songTop {
   align-items: flex-start;
 }
