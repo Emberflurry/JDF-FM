@@ -38,7 +38,17 @@ function formatFindDate(song) {
     year: 'numeric',
   })
 }
+function formatExactDate(dateString) {
+  if (!dateString) return ''
 
+  const d = new Date(`${dateString}T12:00:00`)
+
+  return d.toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  })
+}
 function getPlatform(url = '') {
   const u = url.toLowerCase()
   if (u.includes('spotify.com')) return 'Spotify'
@@ -215,6 +225,7 @@ async function loadSongs() {
       link_url,
       platform,
       cover_url,
+      post_date,
       find_year,
       find_month,
       find_day,
@@ -229,10 +240,11 @@ async function loadSongs() {
         )
       )
     `)
-    .order('find_year', { ascending: false })
-    .order('find_month', { ascending: false, nullsFirst: false })
-    .order('find_day', { ascending: false, nullsFirst: false })
-    .order('created_at', { ascending: false })
+.order('post_date', { ascending: false })
+.order('created_at', { ascending: false })
+.order('find_year', { ascending: false })
+.order('find_month', { ascending: false, nullsFirst: false })
+.order('find_day', { ascending: false, nullsFirst: false })
 
   if (songError) {
     console.error(songError)
@@ -552,8 +564,10 @@ useEffect(() => {
                   )}
                 </div>
 
-                <p className="dateLine">Found: {formatFindDate(song)}</p>
-
+<p className="dateLine">Posted: {formatExactDate(song.post_date)}</p>
+{formatFindDate(song) !== formatExactDate(song.post_date) && (
+  <p className="dateLine">Found: {formatFindDate(song)}</p>
+)}
                 {song.notes && <p className="notes">{song.notes}</p>}
 
                 <div className="tagRow small">
@@ -662,17 +676,18 @@ useEffect(() => {
 function AdminPage({ session }) {
   const initial = todayParts()
 
-  const [form, setForm] = useState({
-    title: '',
-    artist: '',
-    album: '',
-    link_url: '',
-    cover_url: '',
-    date_input: initial.dateInput,
-    date_precision: 'day',
-    tags: '',
-    notes: '',
-  })
+const [form, setForm] = useState({
+  title: '',
+  artist: '',
+  album: '',
+  link_url: '',
+  cover_url: '',
+  post_date: initial.dateInput,
+  date_input: initial.dateInput,
+  date_precision: 'day',
+  tags: '',
+  notes: '',
+})
 
   const [saving, setSaving] = useState(false)
   const [fetchingMeta, setFetchingMeta] = useState(false)
@@ -745,17 +760,18 @@ async function setAccountPassword(e) {
 
   function resetForm() {
     const t = todayParts()
-    setForm({
-      title: '',
-      artist: '',
-      album: '',
-      link_url: '',
-      cover_url: '',
-      date_input: t.dateInput,
-      date_precision: 'day',
-      tags: '',
-      notes: '',
-    })
+setForm({
+  title: '',
+  artist: '',
+  album: '',
+  link_url: '',
+  cover_url: '',
+  post_date: t.dateInput,
+  date_input: t.dateInput,
+  date_precision: 'day',
+  tags: '',
+  notes: '',
+})
   }
 
   async function saveSong(e) {
@@ -776,20 +792,21 @@ async function setAccountPassword(e) {
       const { data: song, error: songError } = await supabase
         .from('songs')
         .insert({
-          title: form.title.trim(),
-          artist: form.artist.trim(),
-          album: form.album.trim() || null,
-          link_url: form.link_url.trim() || null,
-          platform: platform || null,
-          cover_url: form.cover_url.trim() || null,
-          find_year,
-          find_month,
-          find_day,
-          date_precision: form.date_precision,
-          notes: form.notes.trim() || null,
-          slug: uniqueSlug,
-          created_by: session.user.id,
-        })
+  title: form.title.trim(),
+  artist: form.artist.trim(),
+  album: form.album.trim() || null,
+  link_url: form.link_url.trim() || null,
+  platform: platform || null,
+  cover_url: form.cover_url.trim() || null,
+  post_date: form.post_date,
+  find_year,
+  find_month,
+  find_day,
+  date_precision: form.date_precision,
+  notes: form.notes.trim() || null,
+  slug: uniqueSlug,
+  created_by: session.user.id,
+})
         .select()
         .single()
 
@@ -952,7 +969,15 @@ async function setAccountPassword(e) {
             placeholder="Optional for now"
           />
         </label>
-
+<label>
+  Post date
+  <input
+    type="date"
+    value={form.post_date}
+    onChange={(e) => updateField('post_date', e.target.value)}
+    required
+  />
+</label>
         <div className="twoCol">
           <label>
             Find date
