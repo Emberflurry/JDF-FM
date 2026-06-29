@@ -189,17 +189,19 @@ function LoginPage() {
 }
 
 function FeedPage({ session }) {
-  const [songs, setSongs] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [search, setSearch] = useState('')
-  const [selectedTag, setSelectedTag] = useState('')
+ const [songs, setSongs] = useState([])
+const [loading, setLoading] = useState(true)
+const [search, setSearch] = useState('')
+const [selectedTag, setSelectedTag] = useState('')
+const [viewMode, setViewMode] = useState(
+  localStorage.getItem('jdf_fm_view_mode') || 'cards'
+)
 const [expandedSongId, setExpandedSongId] = useState(null)
 const [commentDrafts, setCommentDrafts] = useState({})
 const [authorName, setAuthorName] = useState(
   localStorage.getItem('jdf_fm_author_name') || ''
 )
 const [actionStatus, setActionStatus] = useState('')
-  
 async function loadSongs() {
   setLoading(true)
 
@@ -317,7 +319,10 @@ async function loadSongs() {
 function requireLogin() {
   window.location.href = '/login'
 }
-
+function changeViewMode(nextMode) {
+  setViewMode(nextMode)
+  localStorage.setItem('jdf_fm_view_mode', nextMode)
+}
 async function handleVote(song, value) {
   if (!session) {
     requireLogin()
@@ -437,7 +442,7 @@ useEffect(() => {
           <p className="eyebrow">JDF-FM</p>
           <h1>Ze Daily-ish DelBosQueue Bops</h1>
           <p className="muted">whatever floats across LeFeed </p>
-          <p className="muted">-- Brought to you by the Glice-o-line Corporation, a.r.r. -- </p>
+          <p className="muted">-- Brought to you by the Gliceoline Corporation, GMbH, a.r.r. -- </p>
         </div>
 
 <div className="heroButtons">
@@ -468,7 +473,23 @@ useEffect(() => {
             onChange={(e) => setSearch(e.target.value)}
           />
         </label>
+<div className="viewToggle">
+  <button
+    type="button"
+    className={viewMode === 'cards' ? 'viewButton active' : 'viewButton'}
+    onClick={() => changeViewMode('cards')}
+  >
+    Cards
+  </button>
 
+  <button
+    type="button"
+    className={viewMode === 'list' ? 'viewButton active' : 'viewButton'}
+    onClick={() => changeViewMode('list')}
+  >
+    List
+  </button>
+</div>
         <div className="tagRow">
           <button
             className={!selectedTag ? 'chip active' : 'chip'}
@@ -497,7 +518,7 @@ useEffect(() => {
           <p>No songs yet.</p>
         </section>
       ) : (
-        <section className="grid">
+        <section className={viewMode === 'list' ? 'listView' : 'grid'}>
           {filteredSongs.map((song) => (
             <article className="songCard" key={song.id}>
               <div className="coverWrap">
@@ -842,6 +863,19 @@ async function setAccountPassword(e) {
     <main className="page narrow">
       <header className="adminHeader">
 
+
+
+        <div>
+          <a className="backLink" href="/">← Back to feed</a>
+          <h1>Add song</h1>
+          <p className="muted">Built for quick entry from iPhone Safari.</p>
+        </div>
+
+        <button className="ghostButton" onClick={signOut}>
+          <LogOut size={17} />
+          Log out
+        </button>
+      </header>
 <section className="panel passwordPanel">
   <form onSubmit={setAccountPassword} className="stack">
     <label>
@@ -864,19 +898,6 @@ async function setAccountPassword(e) {
     </button>
   </form>
 </section>
-
-        <div>
-          <a className="backLink" href="/">← Back to feed</a>
-          <h1>Add song</h1>
-          <p className="muted">Built for quick entry from iPhone Safari.</p>
-        </div>
-
-        <button className="ghostButton" onClick={signOut}>
-          <LogOut size={17} />
-          Log out
-        </button>
-      </header>
-
       <form className="panel formPanel" onSubmit={saveSong}>
         <label>
           Song title *
@@ -978,7 +999,7 @@ async function setAccountPassword(e) {
         <button className="primaryButton" disabled={saving}>
           {saving ? 'Saving...' : 'Save song'}
         </button>
-{actionStatus && <p className="status">{actionStatus}</p>}
+
         {status && <p className="status">{status}</p>}
       </form>
     </main>
