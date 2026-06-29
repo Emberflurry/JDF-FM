@@ -233,6 +233,7 @@ async function loadSongs() {
     .from('songs')
     .select(`
       id,
+      created_by,
       title,
       artist,
       album,
@@ -691,6 +692,14 @@ useEffect(() => {
   >
     {song.comment_count} comment{song.comment_count === 1 ? '' : 's'}
   </button>
+
+{session?.user?.id && song.created_by === session.user.id && (
+  <a className="editSongButton" href={`/admin?edit=${song.id}`}>
+    Edit
+  </a>
+)}
+
+
 </div>
 
 {expandedSongId === song.id && (
@@ -777,7 +786,9 @@ const [form, setForm] = useState({
   const [status, setStatus] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [settingPassword, setSettingPassword] = useState(false)
-
+const editSongId = new URLSearchParams(window.location.search).get('edit')
+const isEditing = Boolean(editSongId)
+const [loadingEdit, setLoadingEdit] = useState(Boolean(editSongId))
 async function setAccountPassword(e) {
   e.preventDefault()
 
@@ -806,7 +817,79 @@ async function setAccountPassword(e) {
   function updateField(field, value) {
     setForm((prev) => ({ ...prev, [field]: value }))
   }
+function dateInputFromParts(year, month, day) {
+  const y = year || new Date().getFullYear()
+  const m = String(month || 1).padStart(2, '0')
+  const d = String(day || 1).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
 
+async function saveTagsForSong(songId, rawTags, options = {}) {
+  const { replace = false } = options
+
+  const seen = new Set()
+  const tagRows = rawTags
+    .split(',')
+    .map((name) => name.trim())
+    .filter(Boolean)
+    .map((name) => ({
+      name,
+      slug: slugify(name),
+    }))
+    .filter((tag) => {
+      if (!tag.slug || seen.has(tag.slug)) return false
+      seen.add(tag.slug)
+      return true
+    })
+
+  if (replace) {
+    const { error: deleteError } = await supabase
+      .from('song_tags')
+      .delete()
+      .eq('song_id', songId)
+
+    if (deleteError) throw deleteError
+  }
+
+  if (tagRows.length === 0) return
+
+  const slugs = tagRows.map((t) => t.slug)
+
+  const { data: existingTags, error: existingError } = await supabase
+    .from('tags')
+    .select('id, name, slug')
+    .in('slug', slugs)
+
+  if (existingError) throw existingError
+
+  const existingSlugSet = new Set((existingTags || []).map((t) => t.slug))
+  const missingTags = tagRows.filter((t) => !existingSlugSet.has(t.slug))
+
+  let insertedTags = []
+
+  if (missingTags.length > 0) {
+    const { data, error } = await supabase
+      .from('tags')
+      .insert(missingTags)
+      .select('id, name, slug')
+
+    if (error) throw error
+    insertedTags = data || []
+  }
+
+  const allTags = [...(existingTags || []), ...insertedTags]
+
+  const joinRows = allTags.map((tag) => ({
+    song_id: songId,
+    tag_id: tag.id,
+  }))
+
+  const { error: joinError } = await supabase
+    .from('song_tags')
+    .insert(joinRows)
+
+  if (joinError) throw joinError
+}
   async function fetchMetadata() {
   if (!form.link_url.trim()) {
     setStatus('Paste a song link first.')
@@ -840,7 +923,78 @@ async function setAccountPassword(e) {
 
   setFetchingMeta(false)
 }
+useEffect(() => {
+  async function loadSongForEdit() {
+    if (!editSongId) return
 
+    setLoadingEdit(true)
+    setStatus('Loading song for edit...')
+
+    const { data, error } = await supabase
+      .from('songs')
+      .select(`
+        id,
+        created_by,
+        title,
+        artist,
+        album,
+        link_url,
+        platform,
+        cover_url,
+        post_date,
+        find_year,
+        find_month,
+        find_day,
+        date_precision,
+        notes,
+        song_tags (
+          tags (
+            id,
+            name,
+            slug
+          )
+        )
+      `)
+      .eq('id', editSongId)
+      .single()
+
+    if (error) {
+      console.error(error)
+      setStatus(`Could not load song: ${error.message}`)
+      setLoadingEdit(false)
+      return
+    }
+
+    if (data.created_by && data.created_by !== session.user.id) {
+      setStatus('This song was not created by your admin account.')
+      setLoadingEdit(false)
+      return
+    }
+
+    const tagText = (data.song_tags || [])
+      .map((st) => st.tags?.name)
+      .filter(Boolean)
+      .join(', ')
+
+    setForm({
+      title: data.title || '',
+      artist: data.artist || '',
+      album: data.album || '',
+      link_url: data.link_url || '',
+      cover_url: data.cover_url || '',
+      post_date: data.post_date || todayParts().dateInput,
+      date_input: dateInputFromParts(data.find_year, data.find_month, data.find_day),
+      date_precision: data.date_precision || 'day',
+      tags: tagText,
+      notes: data.notes || '',
+    })
+
+    setStatus('')
+    setLoadingEdit(false)
+  }
+
+  loadSongForEdit()
+}, [editSongId, session.user.id])
   function resetForm() {
     const t = todayParts()
 setForm({
@@ -858,106 +1012,89 @@ setForm({
   }
 
   async function saveSong(e) {
-    e.preventDefault()
-    setSaving(true)
-    setStatus('')
+  e.preventDefault()
+  setSaving(true)
+  setStatus('')
 
-    try {
-      const date = new Date(`${form.date_input}T12:00:00`)
-      const find_year = date.getFullYear()
-      const find_month = form.date_precision === 'year' ? null : date.getMonth() + 1
-      const find_day = form.date_precision === 'day' ? date.getDate() : null
+  try {
+    const date = new Date(`${form.date_input}T12:00:00`)
+    const find_year = date.getFullYear()
+    const find_month = form.date_precision === 'year' ? null : date.getMonth() + 1
+    const find_day = form.date_precision === 'day' ? date.getDate() : null
 
-      const platform = getPlatform(form.link_url)
+    const platform = getPlatform(form.link_url)
+
+    const songPayload = {
+      title: form.title.trim(),
+      artist: form.artist.trim(),
+      album: form.album.trim() || null,
+      link_url: form.link_url.trim() || null,
+      platform: platform || null,
+      cover_url: form.cover_url.trim() || null,
+      post_date: form.post_date,
+      find_year,
+      find_month,
+      find_day,
+      date_precision: form.date_precision,
+      notes: form.notes.trim() || null,
+    }
+
+    if (isEditing) {
+      const { error: updateError } = await supabase
+        .from('songs')
+        .update(songPayload)
+        .eq('id', editSongId)
+
+      if (updateError) throw updateError
+
+      await saveTagsForSong(editSongId, form.tags, { replace: true })
+
+      setStatus('Updated.')
+    } else {
       const baseSlug = slugify(`${form.artist}-${form.title}`)
       const uniqueSlug = `${baseSlug}-${crypto.randomUUID().slice(0, 8)}`
 
       const { data: song, error: songError } = await supabase
         .from('songs')
         .insert({
-  title: form.title.trim(),
-  artist: form.artist.trim(),
-  album: form.album.trim() || null,
-  link_url: form.link_url.trim() || null,
-  platform: platform || null,
-  cover_url: form.cover_url.trim() || null,
-  post_date: form.post_date,
-  find_year,
-  find_month,
-  find_day,
-  date_precision: form.date_precision,
-  notes: form.notes.trim() || null,
-  slug: uniqueSlug,
-  created_by: session.user.id,
-})
+          ...songPayload,
+          slug: uniqueSlug,
+          created_by: session.user.id,
+        })
         .select()
         .single()
 
       if (songError) throw songError
 
-      const tagNames = form.tags
-        .split(',')
-        .map((t) => t.trim())
-        .filter(Boolean)
-
-      const tagRows = tagNames.map((name) => ({
-        name,
-        slug: slugify(name),
-      }))
-
-      if (tagRows.length > 0) {
-        const slugs = tagRows.map((t) => t.slug)
-
-        const { data: existingTags, error: existingError } = await supabase
-          .from('tags')
-          .select('id, name, slug')
-          .in('slug', slugs)
-
-        if (existingError) throw existingError
-
-        const existingSlugSet = new Set((existingTags || []).map((t) => t.slug))
-        const missingTags = tagRows.filter((t) => !existingSlugSet.has(t.slug))
-
-        let insertedTags = []
-
-        if (missingTags.length > 0) {
-          const { data, error } = await supabase
-            .from('tags')
-            .insert(missingTags)
-            .select('id, name, slug')
-
-          if (error) throw error
-          insertedTags = data || []
-        }
-
-        const allTags = [...(existingTags || []), ...insertedTags]
-
-        const joinRows = allTags.map((tag) => ({
-          song_id: song.id,
-          tag_id: tag.id,
-        }))
-
-        const { error: joinError } = await supabase
-          .from('song_tags')
-          .insert(joinRows)
-
-        if (joinError) throw joinError
-      }
+      await saveTagsForSong(song.id, form.tags)
 
       setStatus('Saved.')
       resetForm()
-    } catch (err) {
-      console.error(err)
-      setStatus(`Error: ${err.message}`)
     }
-
-    setSaving(false)
+  } catch (err) {
+    console.error(err)
+    setStatus(`Error: ${err.message}`)
   }
+
+  setSaving(false)
+}
 
   async function signOut() {
     await supabase.auth.signOut()
     window.location.href = '/'
   }
+
+if (loadingEdit) {
+  return (
+    <main className="page narrow">
+      <a className="backLink" href="/">← Back to feed</a>
+      <section className="panel">
+        <p className="muted">Loading song editor...</p>
+        {status && <p className="status">{status}</p>}
+      </section>
+    </main>
+  )
+}
 
   return (
     <main className="page narrow">
@@ -967,8 +1104,12 @@ setForm({
 
         <div>
           <a className="backLink" href="/">← Back to feed</a>
-          <h1>Add song</h1>
-          <p className="muted">Built for quick entry from iPhone Safari.</p>
+          <h1>{isEditing ? 'Edit song' : 'Add song'}</h1>
+<p className="muted">
+  {isEditing
+    ? 'Update cover, tags, notes, links, and dates.'
+    : 'Built for quick entry from iPhone Safari.'}
+</p>
         </div>
 
         <button className="ghostButton" onClick={signOut}>
@@ -1104,9 +1245,21 @@ setForm({
           />
         </label>
 
-        <button className="primaryButton" disabled={saving}>
-          {saving ? 'Saving...' : 'Save song'}
-        </button>
+<button className="primaryButton" disabled={saving}>
+  {saving
+    ? isEditing
+      ? 'Updating...'
+      : 'Saving...'
+    : isEditing
+      ? 'Update song'
+      : 'Save song'}
+</button>
+
+{isEditing && (
+  <a className="secondaryLinkButton" href="/admin">
+    Cancel edit / add new song
+  </a>
+)}
 
         {status && <p className="status">{status}</p>}
       </form>

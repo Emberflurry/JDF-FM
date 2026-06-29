@@ -575,6 +575,15 @@ select:focus {
   grid-template-columns: 1fr;
   gap: 8px;
 }
+
+.editSongButton {
+  margin-left: 0;
+  flex: 1;
+  min-height: 28px;
+  padding: 0 7px;
+  font-size: 0.68rem;
+}
+
 }
 
 .passwordPanel {
@@ -707,4 +716,35 @@ select:focus {
 
 .footerBar p {
   margin: 0;
+}
+
+.listView .songBody {
+  padding-left: 12px;
+}
+
+
+.editSongButton,
+.secondaryLinkButton {
+  border: 1px solid rgba(0,0,0,0.1);
+  background: rgba(255,255,255,0.74);
+  color: #3b332d;
+  border-radius: 999px;
+  min-height: 32px;
+  padding: 0 10px;
+  font-size: 0.82rem;
+  font-weight: 850;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.editSongButton {
+  margin-left: auto;
+}
+
+.secondaryLinkButton {
+  width: 100%;
+  min-height: 44px;
 }
