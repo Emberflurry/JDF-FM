@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Plus, Search, LogOut, Music, ExternalLink } from 'lucide-react'
 import { supabase } from './supabaseClient'
 import './App.css'
-
+import { Analytics } from '@vercel/analytics/react'
 function slugify(value) {
   return String(value || '')
     .toLowerCase()
@@ -1288,24 +1288,28 @@ function App() {
     }
   }, [])
 
+  let page
+
   if (checkingAuth) {
-    return (
+    page = (
       <main className="page">
         <p className="muted">Loading...</p>
       </main>
     )
+  } else if (path === '/login') {
+    page = <LoginPage />
+  } else if (path === '/admin') {
+    page = session ? <AdminPage session={session} /> : <LoginPage />
+  } else {
+    page = <FeedPage session={session} />
   }
 
-  if (path === '/login') {
-    return <LoginPage />
-  }
-
-  if (path === '/admin') {
-    if (!session) return <LoginPage />
-    return <AdminPage session={session} />
-  }
-
-  return <FeedPage session={session} />
+  return (
+    <>
+      {page}
+      <Analytics />
+    </>
+  )
 }
 
 export default App

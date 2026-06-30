@@ -219,7 +219,7 @@ h2 {
 }
 
 .songBody {
-  padding: 16px;
+  padding: 64px;
 }
 
 .songTop {
@@ -381,7 +381,7 @@ select:focus {
 }
 
 .listView .songBody {
-  padding: 12px;
+  padding: 64px;
 }
 
 .listView h2 {
@@ -431,7 +431,7 @@ select:focus {
   }
 
   .songBody {
-    padding: 10px;
+    padding: 64px;
   }
 
   .songTop {
@@ -541,7 +541,7 @@ select:focus {
   text-align: right;
 }
 .listView .songBody {
-  padding-left: 16px;
+  padding-left: 64px;
 }
 .listView .songTop {
   align-items: flex-start;
@@ -560,7 +560,7 @@ select:focus {
 }
 
 .listView .songBody {
-  padding: 9px;
+  padding: 64px;
 }
 
 .listView h2 {
@@ -719,7 +719,7 @@ select:focus {
 }
 
 .listView .songBody {
-  padding-left: 12px;
+  padding-left: 64px;
 }
 
 
